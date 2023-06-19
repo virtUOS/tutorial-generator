@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import glob
 import shutil
@@ -10,7 +11,15 @@ from playwright.sync_api import Playwright, sync_playwright
 
 tmp_dir_path = './tmp'
 piper_path = './piper/piper'
-model_path = './voice-de-thorsten-low/de-thorsten-low.onnx'
+model_path = ''
+
+EXAMPLE_HELP_SECTION = '''
+Examples:
+    python3 tutorial_generator.py -p ./piper/piper -m ./voice-de-thorsten-low/de-thorsten-low.onnx -o tutorial.mp4 -s 1000 -t ./tmp
+
+    python3 tutorial_generator.py -m ./voice-de-thorsten-low/de-thorsten-low.onnx
+        Minimal example which only needs a voice model.
+'''
 
 
 def _get_audio_duration(audio_file: str) -> float:
@@ -32,7 +41,16 @@ def generate_voice(text: str, page, wait=True):
     :param page: Playwright Page object
     :param wait: Whether actions should stop for speech duration
     :param text: text to be voiced
+    :raises FileNotFoundError: If model or piper path does not exist
     """
+    # Ensure model exists
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f'Model path {model_path} does not exist')
+
+    # Ensure piper exists
+    if not os.path.exists(piper_path):
+        raise FileNotFoundError(f'Model path {piper_path} does not exist')
+
     output_file = os.path.join(tmp_dir_path, f'{round(datetime.datetime.now().timestamp())}.wav')
     subprocess.run(
         [piper_path, '--model', model_path, '--output_file', output_file],
@@ -44,7 +62,7 @@ def generate_voice(text: str, page, wait=True):
         page.wait_for_timeout(_get_audio_duration(output_file))
 
 
-def _make_video(start_datetime):
+def _make_video(start_datetime, output_file):
     # Collect all voice files
     voice_files = glob.glob(f'{tmp_dir_path}/*.wav')
     print(voice_files)
@@ -62,10 +80,40 @@ def _make_video(start_datetime):
     video_clip.audio = CompositeAudioClip(voice_clips)
 
     # Save created video
-    video_clip.write_videofile('tutorial.mp4', codec="libx264", audio_codec="aac")
+    video_clip.write_videofile(output_file, codec="libx264", audio_codec="aac")
+
+
+def init_argparse():
+    parser = argparse.ArgumentParser(
+        description='Generates a tutorial from a website with speech.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=EXAMPLE_HELP_SECTION,
+    )
+    parser.add_argument('-p', '--piper', type=str, dest='piper', default='./piper/piper',
+                        help='The path to the piper executable. Default: ./piper/piper')
+    parser.add_argument('-m', '--model', type=str, dest='model', required=True,
+                        help='The path to the piper language model. Example: ./voice-de-thorsten-low/de-thorsten-low.onnx')
+    parser.add_argument('-o', '--output', type=str, dest='outputFile', default='tutorial.mp4',
+                        help='The path to the output file. Default: tutorial.mp4')
+    parser.add_argument('-t', '--tmp-dir', type=str, dest='tmpDir', default='./tmp',
+                        help='The path to the temporary directory. Default: ./tmp')
+    parser.add_argument('-s', '--slowmo', type=int, dest='slowmo', default=1000,
+                        help='Sets slow motion time in milliseconds between execution of actions. '
+                             'Default: 1000.')
+    return parser
 
 
 def run(playwright: Playwright) -> None:
+    parser = init_argparse()
+    args = parser.parse_args()
+
+    global tmp_dir_path, piper_path, model_path
+    tmp_dir_path = args.tmpDir
+    piper_path = args.piper
+    model_path = args.model
+    output_file = args.outputFile
+    slowmo = args.slowmo
+
     if os.path.exists(tmp_dir_path):
         shutil.rmtree(tmp_dir_path)
 
@@ -73,7 +121,7 @@ def run(playwright: Playwright) -> None:
 
     browser = playwright.chromium.launch(
         headless=False,
-        slow_mo=1000  # Slow down execution speed
+        slow_mo=slowmo  # Slow down execution speed
     )
     context = browser.new_context(
         record_video_dir=tmp_dir_path,
@@ -106,7 +154,7 @@ def run(playwright: Playwright) -> None:
     context.close()
     browser.close()
 
-    _make_video(start_datetime)
+    _make_video(start_datetime, output_file)
 
     shutil.rmtree(tmp_dir_path)
 
