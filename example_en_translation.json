@@ -1,0 +1,20 @@
+{
+  "Dieses Tutorial zeigt, wie LTI Tools in Stud IP global konfiguriert werden können und diese in Courseware eingebunden werden.": "This tutorial shows how to globally configure LTI tools in Stud IP and include them in Courseware.",
+  "Zuerst melden sie sich mit ihren Zugangsdaten als Root-Nutzer in ihr Stud IP ein.": "First, log in to your Stud IP as a root user with your credentials.",
+  "Öffnen Sie anschließend die Administrationsseite": "Then open the administration page",
+  "Wählen sie hier den Reiter System": "Select the System tab here",
+  "Klicken Sie links in der Navigation auf LTI-Tools": "Click on LTI Tools in the navigation on the left",
+  "Um ein neues LTI-Tool zu erstellen, wählen sie die Aktion 'Neues LTI Tool registrieren'": "To create a new LTI tool, select the action 'Register new LTI tool'",
+  "In diesem Dialog-Fenster können Sie alle relevanten Einstellungen ihres LTI Tools vornehmen. Dazu zählen unter anderem der Name des Tools, seine URL und seine Schlüssel. Als Beispiel wird ein JupyterHub-Tool konfiguriert.": "In this dialog window you can make all relevant settings of your LTI tool. These include the name of the tool, its URL and its keys. As an example, a JupyterHub tool is configured.",
+  "Abschließend speichern sie das Tool mit der Schaltfläche.": "Finally, save the tool using the button.",
+  "Das Tool ist nun konfiguriert und kann in Courseware genutzt werden. Als Beispiel öffnen Sie die Courseware in ihrem Arbeitsbereich.": "The tool is now configured and can be used in Courseware. As an example, open Courseware in your workspace.",
+  "Erstellen Sie exemplarisch ein neues Lehrmaterial und öffnen sie dieses.": "As an example, create a new courseware and open it.",
+  "Legen sie nun den ersten Inhalt mit der entsprechenden Schaltfläche an.": "Now create the first content with the corresponding button.",
+  "Als nächstes fügen wir den LTI-Block hinzu. Dazu klicken Sie auf die Schaltfläche 'Block zu diesem Abschnitt hinzufügen'": "Next, let's add the LTI block. To do this, click on the 'Add block to this section' button",
+  "Suchen sie nach dem LTI-Block und wählen diesen aus.": "Search for the LTI block and select it",
+  "Sie sehen jetzt die Bearbeitenansicht des Blocks. Auf dieser können sie den Namen des Blocks eingeben und das LTI-Tool auswählen.": "You will now see the edit view of the block. On it, they can enter the name of the block and select the LTI tool.",
+  "Nachdem sie den Block fertig konfiguriert haben, können sie diesen mit der Schaltfläche abspeichern.": "After they have finished configuring the block, they can save it with the button.",
+  "Das Tool wird jetzt angezeigt und kann in ihrer Courseware genutzt werden": "The tool is now displayed and can be used in your courseware",
+  "Wenn sie zurück auf die Bearbeitenansicht des Blocks gehen, können sie sehen, dass sie bei der Auswahl des Tools auch ein eigenes Tool konfigurieren können.": "If you go back to the edit view of the block, you can see that when you select the tool, you can also configure your own tool.",
+  "Sie haben jetzt gelernt, wie sie ein LTI-Tool global in Stud I P konfigurieren und dieses in Courseware nutzen können.": "They have now learned how to configure an LTI tool globally in Stud I P and use it in Courseware."
+}

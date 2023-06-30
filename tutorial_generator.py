@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import glob
+import json
 import shutil
 import subprocess
 from enum import Enum
@@ -21,6 +22,7 @@ tmp_dir_path = './tmp'
 voice_engine = VoiceEngine.COQUI.value
 coqui_tts: TTS | None = None
 piper_path = './piper/piper'
+translations = {}
 tts_model = ''
 
 # Used to recognize if a voice is currently active
@@ -45,6 +47,15 @@ def _get_audio_duration(audio_file: str) -> float:
         return (f.getnframes() / float(f.getframerate())) * 1000
 
 
+def _get_translation(key: str) -> str:
+    global translations
+
+    if key not in translations:
+        return key
+
+    return translations[key]
+
+
 def generate_voice(self, text: str, wait=True):
     """
     Generates an audio file that will be played in the video at the time of the call.
@@ -60,6 +71,8 @@ def generate_voice(self, text: str, wait=True):
 
     # Wait when last voice is speaking
     self.wait_for_voice()
+
+    text = _get_translation(text)
 
     voice_start_timestamp = datetime.datetime.now().timestamp()
     output_file = os.path.join(tmp_dir_path, f'{round(voice_start_timestamp)}.wav')
@@ -135,22 +148,39 @@ def init_voice(model: str):
         coqui_tts = TTS(model)
 
 
+def init_translations(translation_file: str):
+    if not translation_file:
+        return
+
+    global translations
+
+    if not os.path.exists(translation_file):
+        raise FileNotFoundError(f'Translation file {translation_file} does not exist')
+
+    with open(translation_file) as f:
+        translations = json.load(f)
+
+
 def init_argparse():
     parser = argparse.ArgumentParser(
         description='Generates a tutorial from a website with speech.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=EXAMPLE_HELP_SECTION,
     )
-    parser.add_argument('-v', '--voice-engine', type=str, dest='engine', default=VoiceEngine.COQUI.value,
-                        help=f'The selected text-to-speech system. Values: {VoiceEngine.COQUI.value} (default), '
-                             f'{VoiceEngine.PIPER.value}')
+    parser.add_argument('-v', '--voice-engine', type=str, dest='engine',
+                        choices=[VoiceEngine.COQUI.value, VoiceEngine.PIPER.value],
+                        default=VoiceEngine.COQUI.value,
+                        help='The selected text-to-speech system.')
     parser.add_argument('-p', '--piper', type=str, dest='piper', default='./piper/piper',
                         help='The path to the piper executable. Default: ./piper/piper')
     parser.add_argument('-m', '--model', type=str, dest='model', required=True,
                         help='The path or name of the language model. Example: tts_models/de/thorsten/tacotron2-DDC')
     parser.add_argument('-o', '--output', type=str, dest='outputFile', default='tutorial.mp4',
                         help='The path to the output file. Default: tutorial.mp4')
-    parser.add_argument('-t', '--tmp-dir', type=str, dest='tmpDir', default='./tmp',
+    parser.add_argument('-t', '--translation-file', type=str, dest='translationPath',
+                        help='The path to a file with translations for voice. If a file is configured, '
+                             'the default language texts will be replaced by their translations.')
+    parser.add_argument('--tmp-dir', type=str, dest='tmpDir', default='./tmp',
                         help='The path to the temporary directory. Default: ./tmp')
     parser.add_argument('-s', '--slowmo', type=int, dest='slowmo', default=1000,
                         help='Sets slow motion time in milliseconds between execution of actions. '
@@ -169,14 +199,16 @@ def run(playwright: Playwright) -> None:
     args = parser.parse_args()
 
     global tmp_dir_path, voice_engine, piper_path, tts_model
-    tmp_dir_path = args.tmpDir
     voice_engine = args.engine
     piper_path = args.piper
     tts_model = args.model
     output_file = args.outputFile
+    translation_file = args.translationPath
+    tmp_dir_path = args.tmpDir
     slowmo = args.slowmo
 
     init_voice(tts_model)
+    init_translations(translation_file)
 
     if os.path.exists(tmp_dir_path):
         shutil.rmtree(tmp_dir_path)
@@ -206,7 +238,8 @@ def run(playwright: Playwright) -> None:
     # ---------------------
     page = context.new_page()
     page.goto("http://localhost/studip/")
-    page.voice("Dieses Tutorial zeigt, wie LTI Tools in Stud IP global konfiguriert werden können und diese in Courseware eingebunden werden.")
+    page.voice("Dieses Tutorial zeigt, wie LTI Tools in Stud IP global konfiguriert werden "
+               "können und diese in Courseware eingebunden werden.")
 
     page.voice("Zuerst melden sie sich mit ihren Zugangsdaten als Root-Nutzer in ihr Stud IP ein.", wait=False)
     page.get_by_role("link", name="Login for registered users").click()
