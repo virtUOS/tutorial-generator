@@ -3,17 +3,27 @@ import datetime
 import glob
 import shutil
 import subprocess
+from enum import Enum
 from pathlib import Path
 import wave
 
 from moviepy.editor import *
 from playwright.sync_api import Playwright, sync_playwright, Page, Locator
+from TTS.api import TTS
+
+
+class VoiceEngine(Enum):
+    COQUI = "coqui"
+    PIPER = "piper"
+
 
 tmp_dir_path = './tmp'
+voice_engine = VoiceEngine.COQUI.value
+coqui_tts: TTS | None = None
 piper_path = './piper/piper'
-model_path = ''
+tts_model = ''
 
-# Used to recognize if a voice is current active
+# Used to recognize if a voice is currently active
 last_voice_end_timestamp: float = 0.0
 
 EXAMPLE_HELP_SECTION = '''
@@ -51,28 +61,37 @@ def generate_voice(self, text: str, wait=True):
     # Wait when last voice is speaking
     self.wait_for_voice()
 
-    # Ensure model exists
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f'Model path {model_path} does not exist')
-
-    # Ensure piper exists
-    if not os.path.exists(piper_path):
-        raise FileNotFoundError(f'Model path {piper_path} does not exist')
-
     voice_start_timestamp = datetime.datetime.now().timestamp()
     output_file = os.path.join(tmp_dir_path, f'{round(voice_start_timestamp)}.wav')
-    subprocess.run(
-        [piper_path, '--model', model_path, '--output_file', output_file],
-        input=str.encode(text)
-    )
+
+    start_process_datetime = datetime.datetime.now()
+    if voice_engine == VoiceEngine.COQUI.value:
+        coqui_tts.tts_to_file(text=text, file_path=output_file)
+    else:
+        # Ensure model exists
+        if not os.path.exists(tts_model):
+            raise FileNotFoundError(f'Model path {tts_model} does not exist')
+
+        # Ensure piper exists
+        if not os.path.exists(piper_path):
+            raise FileNotFoundError(f'Piper executable {piper_path} does not exist')
+
+        subprocess.run(
+            [piper_path, '--model', tts_model, '--output_file', output_file],
+            input=str.encode(text)
+        )
+
+    end_process_datetime = datetime.datetime.now()
+    processing_time = end_process_datetime - start_process_datetime
 
     voice_duration_ms = _get_audio_duration(output_file)
     # Store last voice end time
     last_voice_end_timestamp = voice_start_timestamp + voice_duration_ms / 1000
 
     # Add time out to page with the duration of the speech
-    if wait:
-        self.wait_for_timeout(voice_duration_ms)
+    wait_time = voice_duration_ms - processing_time.seconds * 1000
+    if wait and wait_time > 0.0:
+        self.wait_for_timeout(wait_time)
 
 
 def wait_for_voice(self):
@@ -105,16 +124,30 @@ def _make_video(start_datetime: datetime, output_file: str):
     video_clip.write_videofile(output_file, codec="libx264", audio_codec="aac")
 
 
+def init_voice(model: str):
+    global voice_engine, coqui_tts
+
+    if voice_engine == VoiceEngine.COQUI.value:
+        # German models:
+        # tts_models/de/thorsten/tacotron2-DCA (bad quality)
+        # tts_models/de/thorsten/vits (good quality)
+        # tts_models/de/thorsten/tacotron2-DDC (best quality)
+        coqui_tts = TTS(model)
+
+
 def init_argparse():
     parser = argparse.ArgumentParser(
         description='Generates a tutorial from a website with speech.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=EXAMPLE_HELP_SECTION,
     )
+    parser.add_argument('-v', '--voice-engine', type=str, dest='engine', default=VoiceEngine.COQUI.value,
+                        help=f'The selected text-to-speech system. Values: {VoiceEngine.COQUI.value} (default), '
+                             f'{VoiceEngine.PIPER.value}')
     parser.add_argument('-p', '--piper', type=str, dest='piper', default='./piper/piper',
                         help='The path to the piper executable. Default: ./piper/piper')
     parser.add_argument('-m', '--model', type=str, dest='model', required=True,
-                        help='The path to the piper language model. Example: ./voice-de-thorsten-low/de-thorsten-low.onnx')
+                        help='The path or name of the language model. Example: tts_models/de/thorsten/tacotron2-DDC')
     parser.add_argument('-o', '--output', type=str, dest='outputFile', default='tutorial.mp4',
                         help='The path to the output file. Default: tutorial.mp4')
     parser.add_argument('-t', '--tmp-dir', type=str, dest='tmpDir', default='./tmp',
@@ -135,12 +168,15 @@ def run(playwright: Playwright) -> None:
     parser = init_argparse()
     args = parser.parse_args()
 
-    global tmp_dir_path, piper_path, model_path
+    global tmp_dir_path, voice_engine, piper_path, tts_model
     tmp_dir_path = args.tmpDir
+    voice_engine = args.engine
     piper_path = args.piper
-    model_path = args.model
+    tts_model = args.model
     output_file = args.outputFile
     slowmo = args.slowmo
+
+    init_voice(tts_model)
 
     if os.path.exists(tmp_dir_path):
         shutil.rmtree(tmp_dir_path)

@@ -4,7 +4,8 @@ This script is a prototyp for an automated tutorial generator which can be used 
 ## Installation
 1. Install piper under `./piper`, see https://github.com/rhasspy/piper#installation. The executable should be located under `./piper/piper`. You can also set an alternative path with the `-p` argument.
 2. Download a voice from https://github.com/rhasspy/piper/releases/tag/v0.0.2. When executing the script, pass the `-m` argument with the voice model path of the `.onnx` model file.
-3. `pip install -r requirements.txt`
+3. `sudo apt install espeak-ng`
+4. `pip install -r requirements.txt`
 4. `playwright install`
 
 ## Usage
