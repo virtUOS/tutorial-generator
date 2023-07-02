@@ -14,6 +14,9 @@ from TTS.api import TTS
 
 
 class VoiceEngine(Enum):
+    """
+    Represents a text to speech system
+    """
     COQUI = "coqui"
     PIPER = "piper"
 
@@ -30,10 +33,15 @@ last_voice_end_timestamp: float = 0.0
 
 EXAMPLE_HELP_SECTION = '''
 Examples:
-    python3 tutorial_generator.py -p ./piper/piper -m ./voice-de-thorsten-low/de-thorsten-low.onnx -o tutorial.mp4 -s 1000 -t ./tmp
-
-    python3 tutorial_generator.py -m ./voice-de-thorsten-low/de-thorsten-low.onnx
-        Minimal example which only needs a voice model.
+    python3 tutorial_generator.py -v piper -p ./piper/piper -m ./voice-de-thorsten-low/de-thorsten-low.onnx -o tutorial.mp4 -s 1000 -t ./tmp
+    
+    python3 tutorial_generator.py -v piper -m ./voice-de-thorsten-low/de-thorsten-low.onnx
+        Minimal piper example which only needs a voice model.
+    python3 tutorial_generator.py -v coqui -m tts_models/de/thorsten/tacotron2-DDC
+        Minimal coqui example which only needs a voice model.
+        
+    python3 tutorial_generator.py -v coqui -m tts_models/en/ljspeech/tacotron2-DDC -t ./example_en_translation.json
+        Translation file example.
 '''
 
 
@@ -48,6 +56,11 @@ def _get_audio_duration(audio_file: str) -> float:
 
 
 def _get_translation(key: str) -> str:
+    """
+    Gets the translation for the given key if translation exists
+    :param key: translation key
+    :return: translation if key exists. Otherwise, passed key.
+    """
     global translations
 
     if key not in translations:
@@ -58,13 +71,14 @@ def _get_translation(key: str) -> str:
 
 def generate_voice(self, text: str, wait=True):
     """
-    Generates an audio file that will be played in the video at the time of the call.
+    Generates voice that will be played in the video at the time of the call.
+    If a voice is active when this function is called, the new voice will be added after its end.
 
-    If wait is true the page will wait for the duration of the speech.
+    If wait is true the page will wait until the end of the speech.
 
-    :param page: Playwright Page object
+    :param self: Playwright Page object
+    :param text: text to be voiced or key of translation
     :param wait: Whether actions should stop for speech duration
-    :param text: text to be voiced
     :raises FileNotFoundError: If model or piper path does not exist
     """
     global last_voice_end_timestamp
@@ -110,6 +124,7 @@ def generate_voice(self, text: str, wait=True):
 def wait_for_voice(self):
     """
     Waits when the last voice is speaking until its end time
+    :param self: Playwright Page object
     """
     last_voice_remaining_duration_sec = last_voice_end_timestamp - datetime.datetime.now().timestamp()
     if last_voice_remaining_duration_sec > 0.0:
@@ -138,6 +153,10 @@ def _make_video(start_datetime: datetime, output_file: str):
 
 
 def init_voice(model: str):
+    """
+    Initialization of the voice models
+    :param model: tts model
+    """
     global voice_engine, coqui_tts
 
     if voice_engine == VoiceEngine.COQUI.value:
@@ -149,6 +168,10 @@ def init_voice(model: str):
 
 
 def init_translations(translation_file: str):
+    """
+    Reads the passed translation file
+    :param translation_file: translation file
+    """
     if not translation_file:
         return
 
@@ -189,6 +212,12 @@ def init_argparse():
 
 
 def mark_element(self: Locator, timeout: float=3000):
+    """
+    Highlight element with a red border. The border is set by inline css.
+    :param self: Locator identifying the element to highlight
+    :param timeout: timeout after highlight
+    :return: Locator
+    """
     self.evaluate("element => element.style['border'] = '2px solid red'")
     self.wait_for(timeout=timeout)
     return self
@@ -266,7 +295,7 @@ def run(playwright: Playwright) -> None:
                " Als Beispiel wird ein JupyterHub-Tool konfiguriert.")
     page.get_by_label("Name der Anwendung").fill("JupyterHub")
     page.get_by_label("URL der Anwendung").click()
-    page.get_by_label("URL der Anwendung").fill("https://localhost/jupyterhub/hub/lti/launch")
+    page.get_by_label("URL der Anwendung").fill("https://jupyter.virtuos.uos.de/hub/lti/launch")
     page.get_by_label("Consumer-Key").click()
     page.get_by_label("Consumer-Key").fill("key")
     page.get_by_label("Consumer-Secret").click()
