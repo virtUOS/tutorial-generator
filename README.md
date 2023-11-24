@@ -9,6 +9,7 @@ This script is a prototyp for an automated tutorial generator which can be used 
 5. `playwright install`
 
 If you are using piper:
+
 6. Install piper under `./piper`, see https://github.com/rhasspy/piper#installation. The executable should be located under `./piper/piper`. You can also set an alternative path with the `-p` argument.
 7. Download a voice from https://github.com/rhasspy/piper/releases/tag/v0.0.2. When executing the script, pass the `-m` argument with the voice model path of the `.onnx` model file.
 
